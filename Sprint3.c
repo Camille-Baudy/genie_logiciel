@@ -35,6 +35,31 @@ void extractionTitre(char * fichier,char * fichierXml){
         }
 }
 
+void extractionAuteur(char *fichier, FILE *outputFile) {
+	// On créer la commande pdf2txt
+	char command[BUFFER_SIZE];
+	sprintf(command, "pdf2txt -o temp.txt %s", fichier);
+	
+	// On exécute la commande pdf2txt
+	system(command);
+	
+	// On ouvre le fichier texte converti
+	FILE *file = fopen("temp.txt", "r");
+	//FILE *file2 = fopen(fichierXml, "a");
+	
+	// On cherche les lignes qui contiennent les auteurs avec leurs adresses
+	char line[BUFFER_SIZE];
+	int isEmpty = 0;
+	fprintf(fichierXml, "%s", "    <auteur> ");
+	while (fgets(line, BUFFER_SIZE, file) != NULL) {
+		fprintf(fichierXml, "%s", line);
+		if (line[0] == '\n' || line[0] == '\t' || line[0] == ' ' || line[0] == '\r') {
+			fprintf(fichierXml, "    </auteur> ");
+			fclose(file2);
+		}
+	}
+}
+
 
 void extractionBiblio(char * fichier, FILE * outputFile){
 	char command[BUFFER_SIZE];
