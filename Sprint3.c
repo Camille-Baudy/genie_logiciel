@@ -6,7 +6,7 @@
 #include <unistd.h>
 #define BUFFER_SIZE 1024
 
-void extractionTitre(char * fichier,char * fichierXml){
+void extractionTitre(char * fichier,FILE * fichierXml){
 
     // Créer la commande pdf2txt
     char command[BUFFER_SIZE];
@@ -17,25 +17,23 @@ void extractionTitre(char * fichier,char * fichierXml){
 
     // Ouvrir le fichier texte converti
    FILE *file = fopen("temp.txt", "r");
-   FILE *file2=fopen(fichierXml,"a");
    
 
     // Chercher la ligne qui contient le titre du papier
     char line[BUFFER_SIZE];
     int isEmpty = 0;
     fprintf(fichierXml,"%s","    <titre> ");
-     while (fgets(line, BUFFER_SIZE, file) != NULL) {
-            fprintf(fichierXml,"%s",line);
-             
+     while (fgets(line, BUFFER_SIZE, file) != NULL) {             
                if (line[0] == '\n' || line[0] == '\t'|| line[0] == ' ' || line[0] == '\r') {   
-                    fprintf(fichierXml,"    </titre> ");
-                    fclose(file2);
-            
-            }
+                    fprintf(fichierXml,"	</titre>\n");
+                    fclose(file);
+				}
+				else
+					fprintf(fichierXml,"%s",line);
         }
 }
 
-void extractionAuteur(char *fichier, char *fichierXml) {
+void extractionAuteur(char *fichier, FILE *outputFile) {
 	// On créer la commande pdf2txt
 	char command[BUFFER_SIZE];
 	sprintf(command, "pdf2txt -o temp.txt %s", fichier);
@@ -45,21 +43,61 @@ void extractionAuteur(char *fichier, char *fichierXml) {
 	
 	// On ouvre le fichier texte converti
 	FILE *file = fopen("temp.txt", "r");
-	FILE *file2 = fopen(fichierXml, "a");
+	//FILE *file2 = fopen(fichierXml, "a");
 	
 	// On cherche les lignes qui contiennent les auteurs avec leurs adresses
 	char line[BUFFER_SIZE];
 	int isEmpty = 0;
-	fprintf(file2, "%s", "    <auteur> ");
+	fprintf(outputFile, "%s", "    <auteur> ");
 	while (fgets(line, BUFFER_SIZE, file) != NULL) {
-		fprintf(file2, "%s", line);
-		if (line[0] == '\n' || line[0] == '\t'|| line[0] == ' ' || line[0] == '\r') {
-			fprintf(fichierXml, "    </auteur> ");
-			fclose(file2);
-			break;
+		fprintf(outputFile, "%s", line);
+		if (line[3] == '\n' || line[3] == '\t' || line[3] == ' ' || line[3] == '\r') {
+			fprintf(outputFile, "    </auteur> ");
+			fclose(file);
 		}
 	}
-	fclose(file2);
+}
+
+void extractionAbstract(char * fichier,FILE * fichierXml){
+    char command[BUFFER_SIZE];
+    sprintf(command, "pdf2txt -o temp.txt %s", fichier);
+
+    // Exécuter la commande pdf2txt
+    system(command);
+
+    // Ouvrir le fichier texte converti
+   FILE *file = fopen("temp.txt", "r");
+    
+    char line[BUFFER_SIZE];
+    int foundAbstract = 0;
+    int isEmpty = 0;
+    
+    fprintf(fichierXml,"%s","	<abstract>");
+    while (fgets(line, BUFFER_SIZE, file) != NULL) {
+          if (strstr(line, "Abstract") != NULL) {
+            foundAbstract = 1;
+            continue;
+        }
+        if (foundAbstract==1) {
+            
+               if (line[0] == '\n' || line[0] == '\t'|| line[0] == ' ' || line[0] == '\r') {
+                    isEmpty += 1;
+                   
+                }
+                else {
+					 if (isEmpty==2) {
+						// La ligne est vide, nous avons atteint la fin du paragraphe
+						fprintf(fichierXml,"%s","	</abstract>\n");
+						fclose(file);
+						}
+					else 
+						fprintf(fichierXml,"	%s",line);
+				}
+
+            
+        }
+ 
+    }
 }
 
 
@@ -72,7 +110,6 @@ void extractionBiblio(char * fichier, FILE * outputFile){
 
     // Ouvrir le fichier texte converti
    FILE *file = fopen("temp.txt", "r"); 
-    //FILE *file2 = fopen("temp2.txt", "a");
     
     char line[BUFFER_SIZE];
 	int foundAbstract = 0;
@@ -85,7 +122,7 @@ void extractionBiblio(char * fichier, FILE * outputFile){
         } 
         if (foundAbstract==1) {
               if (line[0] != '\n')
-				fprintf(outputFile,"%s",line); 
+				fprintf(outputFile,"	%s",line); 
         }
 	}
     
@@ -108,7 +145,18 @@ void convertirXml(char* file){
 	
 	//extraction du préambule
 	fprintf(outputFile, "	<premabule> %s </preambule> \n", file);
+	
+	//titre
 	extractionTitre("compression.pdf",outputFile);
+	
+	//auteur
+	extractionAuteur("compression.pdf",outputFile);
+	
+	//abstract
+	extractionAbstract("compression.pdf",outputFile);
+	
+	
+	//biblio
 	fprintf(outputFile, "	<biblio>");
 	extractionBiblio("compression.pdf",outputFile);
 	fprintf(outputFile, "</biblio>\n");
@@ -118,11 +166,18 @@ void convertirXml(char* file){
 	
 }
 
+void parseur(char *format){
+	
+	if(strcmp(format,"-t")==0)
+		convertirXml("compression.pdf");
+	//else f(strcmp(format,"-x")==0)
+		//convertirTxt("compression.pdf");
+}
 
 
 
-int main() {
-	convertirXml("compression.pdf");
+int main(char *argv[]) {
+	parseur("-t");
     return 0;  
 }
 	
