@@ -450,13 +450,86 @@ void extractionIntroductionXml(char *fichier, FILE *outputFile) {
             continue;
         }
         if (foundIntroduction==1) {
-			if ((line[0] == '\n' || line[0] == '\t' || line[0] == ' ' || line[0] == '\r') && strstr(line, "2 ") != NULL || strstr(line, "2.") != NULL) {
+			if (strstr(line, "2 ") != NULL || strstr(line, "2.") != NULL) {
 				fprintf(outputFile,"%s","	</introduction>\n");
-				break;
+				fclose(file);
 			} else if (line[0] != '\n')
 				fprintf(outputFile,"	%s",line);
 			}
         }
+    // Suppression du fichier temporaire
+    if (remove("temp.txt") != 0)
+        perror("Erreur lors de la suppression du fichier temporaire");
+ 
+}
+
+void extractionDiscussionXml(char * fichier,FILE * fichierXml){
+    char command[BUFFER_SIZE];
+    sprintf(command, "pdf2txt -o temp.txt %s", fichier);
+
+    // Exécuter la commande pdf2txt
+    system(command);
+
+    // Ouvrir le fichier texte converti
+   FILE *file = fopen("temp.txt", "r");
+    
+    char line[BUFFER_SIZE];
+    int foundDiscussion = 0;
+    int isEmpty = 0;
+    
+    fprintf(fichierXml,"%s","	<discussion>");
+    while (fgets(line, BUFFER_SIZE, file) != NULL) {
+          if ((strstr(line,"Acknowledgments")!=NULL)||(strstr(line,"Acknowledgements")!=NULL)) {
+            foundDiscussion = 1;
+            continue;
+        }
+        if (foundDiscussion==1) {
+            
+					 if ((strstr(line, "References") != NULL) || (strstr(line, " References") != NULL)) {
+						// on a atteint la prochaine section
+						fprintf(fichierXml,"%s","	</discussion>\n");
+						fclose(file);
+						}
+					else if (line[0] != '\n')
+						fprintf(fichierXml,"	%s",line);
+				}    
+        }
+    // Suppression du fichier temporaire
+    if (remove("temp.txt") != 0)
+        perror("Erreur lors de la suppression du fichier temporaire");
+ 
+ 
+    }
+    
+void extractionCorpsXml(char *fichier, FILE *outputFile) {
+	// Créer la commande pdf2txt
+    char command[BUFFER_SIZE];
+    sprintf(command, "pdf2txt -o temp.txt %s", fichier);
+
+    // Exécuter la commande pdf2txt
+    system(command);
+
+    // Ouvrir le fichier texte converti
+    FILE *file = fopen("temp.txt", "r");
+
+    // On cherche les lignes qui contiennent l'introduction
+	char line[BUFFER_SIZE];
+    int foundCorps = 0;
+    
+    fprintf(outputFile,"%s","	<corps>");
+    while (fgets(line, BUFFER_SIZE, file) != NULL) {
+        if (strstr(line, "2 ") != NULL || strstr(line, "2. ") != NULL) {
+            foundCorps = 1;
+            continue;
+        }
+        if (foundCorps) {
+            if (strstr(line, "Conclusion") != NULL || strstr(line, " Conclusion") != NULL) {
+                fprintf(outputFile, "%s", "    </corps>\n");
+                fclose(file);
+            } else if (line[0] != '\n')
+                fprintf(outputFile, "    %s", line);
+        }
+    }
     // Suppression du fichier temporaire
     if (remove("temp.txt") != 0)
         perror("Erreur lors de la suppression du fichier temporaire");
@@ -499,13 +572,6 @@ void convertirXml(char* file, char* Dossier, char * SousDossier)
 	//extraction du préambule
 	extractionNomXml(file,outputFile);
 	
-	/*// Conversion des ' ' en '_' 
-    for(int i = 0; i < 250 && pdfFileName[i] != '\0'; i++) {
-		if(pdfFileName[i] == '_')
-			pdfFileName[i] = ' ';
-	}
-	fprintf(outputFile, "	<preambule> %s </preambule> \n", pdfFileName);*/
-	
 	//titre
 	extractionTitreXml(FileName,outputFile);
 	
@@ -518,8 +584,14 @@ void convertirXml(char* file, char* Dossier, char * SousDossier)
 	//introduction
 	extractionIntroductionXml(FileName,outputFile);
 	
+	//corps
+	extractionCorpsXml(FileName,outputFile);
+	
 	//conclusion
 	extractionConclusionXml(FileName,outputFile);
+	
+	//discussion
+	extractionDiscussionXml(FileName,outputFile);
 	
 	//biblio
 	extractionBiblioXml(FileName,outputFile);
