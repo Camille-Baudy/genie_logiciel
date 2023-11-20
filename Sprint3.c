@@ -4,6 +4,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <stdbool.h>  // Ajouter cette ligne pour utiliser le type de données bool
 #define BUFFER_SIZE 1024
 
 void extractionTitre(char * fichier,FILE * fichierXml){
@@ -26,7 +27,8 @@ void extractionTitre(char * fichier,FILE * fichierXml){
      while (fgets(line, BUFFER_SIZE, file) != NULL) {             
                if (line[0] == '\n' || line[0] == '\t'|| line[0] == ' ' || line[0] == '\r') {   
                     fprintf(fichierXml,"	</titre>\n");
-                    fclose(file);
+                   // fclose(file);
+                   break;
 				}
 				else
 					fprintf(fichierXml,"%s",line);
@@ -34,29 +36,39 @@ void extractionTitre(char * fichier,FILE * fichierXml){
 }
 
 void extractionAuteur(char *fichier, FILE *outputFile) {
-	// On créer la commande pdf2txt
-	char command[BUFFER_SIZE];
-	sprintf(command, "pdf2txt -o temp.txt %s", fichier);
-	
-	// On exécute la commande pdf2txt
-	system(command);
-	
-	// On ouvre le fichier texte converti
-	FILE *file = fopen("temp.txt", "r");
-	//FILE *file2 = fopen(fichierXml, "a");
-	
-	// On cherche les lignes qui contiennent les auteurs avec leurs adresses
-	char line[BUFFER_SIZE];
-	int isEmpty = 0;
-	fprintf(outputFile, "%s", "    <auteur> ");
+    // Créer la commande pdf2txt
+    char command[BUFFER_SIZE];
+    sprintf(command, "pdf2txt -o temp.txt %s", fichier);
+
+    // Exécuter la commande pdf2txt
+    system(command);
+
+    // Ouvrir le fichier texte converti
+    FILE *file = fopen("temp.txt", "r");
+
+    // On cherche les lignes qui contiennent les auteurs avec leurs adresses
+    char line[BUFFER_SIZE];
+    bool foundTitle = false;
+
+	fprintf(outputFile, "%s", "    <auteur>");
+
 	while (fgets(line, BUFFER_SIZE, file) != NULL) {
-		fprintf(outputFile, "%s", line);
-		if (line[3] == '\n' || line[3] == '\t' || line[3] == ' ' || line[3] == '\r') {
-			fprintf(outputFile, "    </auteur> ");
-			fclose(file);
+		if (line[0] == '\n' || line[0] == '\t' || line[0] == ' ' || line[0] == '\r') {
+			foundTitle = true;
+			continue;
+		}
+		if (foundTitle) {
+			if (strstr(line, "Abstract") != NULL || strstr(line, "article") != NULL || strstr(line, "present") != NULL) {
+				fprintf(outputFile, "%s", "    </auteur>\n");
+				break;
+			} else {
+				fprintf(outputFile, "    %s", line);
+			}
 		}
 	}
 }
+
+
 
 void extractionAbstract(char * fichier,FILE * fichierXml){
     char command[BUFFER_SIZE];
@@ -127,7 +139,7 @@ void extractionBiblio(char * fichier, FILE * outputFile){
 	}
     
  
-  fclose(file);
+  //fclose(file);
 }
 
 
@@ -176,7 +188,7 @@ void parseur(char *format){
 
 
 
-int main(char *argv[]) {
+int main(void) {
 	parseur("-t");
     return 0;  
 }
