@@ -22,7 +22,7 @@ void extractionTitre(char * fichier,FILE * fichierXml){
 
     // Chercher la ligne qui contient le titre du papier
     char line[BUFFER_SIZE];
-    int isEmpty = 0;
+//    int isEmpty = 0;
     fprintf(fichierXml,"%s","    <titre> ");
      while (fgets(line, BUFFER_SIZE, file) != NULL) {             
                if (line[0] == '\n' || line[0] == '\t'|| line[0] == ' ' || line[0] == '\r') {   
@@ -82,7 +82,7 @@ void extractionIntroduction(char *fichier, FILE *outputFile) {
     // On cherche les lignes qui contiennent l'introduction
 	char line[BUFFER_SIZE];
     bool foundIntroduction = false;
-    int isEmpty = 0;
+//    int isEmpty = 0;
     
     fprintf(outputFile,"%s","	<introduction>");
     while (fgets(line, BUFFER_SIZE, file) != NULL) {
@@ -91,8 +91,41 @@ void extractionIntroduction(char *fichier, FILE *outputFile) {
             continue;
         }
         if (foundIntroduction) {
-			if (strstr(line, "2 ") != NULL) {
+			if ((line[0] == '\n' || line[0] == '\t' || line[0] == ' ' || line[0] == '\r') && strstr(line, "2 ") != NULL || strstr(line, "2.") != NULL) {
 				fprintf(outputFile,"%s","	</introduction>\n");
+				break;
+			} else {
+				fprintf(outputFile,"	%s",line);
+			}
+        }
+    }
+}
+
+void extractionCorps(char *fichier, FILE *outputFile) {
+	// Créer la commande pdf2txt
+    char command[BUFFER_SIZE];
+    sprintf(command, "pdf2txt -o temp.txt %s", fichier);
+
+    // Exécuter la commande pdf2txt
+    system(command);
+
+    // Ouvrir le fichier texte converti
+    FILE *file = fopen("temp.txt", "r");
+
+    // On cherche les lignes qui contiennent l'introduction
+	char line[BUFFER_SIZE];
+    bool foundCorps = false;
+//    int isEmpty = 0;
+    
+    fprintf(outputFile,"%s","	<corps>");
+    while (fgets(line, BUFFER_SIZE, file) != NULL) {
+        if ((line[0] == '\n' || line[0] == '\t' || line[0] == ' ' || line[0] == '\r') && strstr(line, "2 ") != NULL || strstr(line, "2. ") != NULL) {
+            foundCorps = true;
+            continue;
+        }
+        if (foundCorps) {
+			if ((line[0] == '\n' || line[0] == '\t' || line[0] == ' ' || line[0] == '\r') && strstr(line, "Conclusion") != NULL || strstr(line, " Conclusion") != NULL) {
+				fprintf(outputFile,"%s","	</corps>\n");
 				break;
 			} else {
 				fprintf(outputFile,"	%s",line);
@@ -157,7 +190,7 @@ void extractionBiblio(char * fichier, FILE * outputFile){
     
     char line[BUFFER_SIZE];
 	int foundAbstract = 0;
-	int isEmpty = 0;
+//	int isEmpty = 0;
 	
     while (fgets(line, BUFFER_SIZE, file) != NULL) {
           if (strstr(line, "References") != NULL) {
@@ -191,20 +224,23 @@ void convertirXml(char* file){
 	fprintf(outputFile, "	<premabule> %s </preambule> \n", file);
 	
 	//titre
-	extractionTitre("compression.pdf",outputFile);
+	extractionTitre("mikheev.pdf",outputFile);
 	
 	//auteur
-	extractionAuteur("compression.pdf",outputFile);
+	extractionAuteur("mikheev.pdf",outputFile);
 	
-	extractionIntroduction("compression.pdf", outputFile);
+
 	
 	//abstract
-	extractionAbstract("compression.pdf",outputFile);
+	extractionAbstract("mikheev.pdf",outputFile);
+	
+	extractionIntroduction("mikheev.pdf", outputFile);
+	extractionCorps("compression.pdf", outputFile);
 	
 	
 	//biblio
 	fprintf(outputFile, "	<biblio>");
-	extractionBiblio("compression.pdf",outputFile);
+	extractionBiblio("mikheev.pdf",outputFile);
 	fprintf(outputFile, "</biblio>\n");
 	
 
@@ -215,7 +251,7 @@ void convertirXml(char* file){
 void parseur(char *format){
 	
 	if(strcmp(format,"-t")==0)
-		convertirXml("compression.pdf");
+		convertirXml("Boudin-Torres-2006.pdf");
 	//else f(strcmp(format,"-x")==0)
 		//convertirTxt("compression.pdf");
 }
